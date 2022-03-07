@@ -30,3 +30,11 @@ class RNN(nn.Module):
     def initHidden(self):
         return torch.zeros(1, self.hidden_size)
 
+if not osu.is_running():
+    exit("osu! is not running. Please start osu! (on a offline game) and try again.")
+
+print("osu! is running. Make sure you are running the game offline (not on osu! servers: check the Github readme to learn how). We are not responsible if you get banned from official osu! servers.")
+agree = input("Are you ready to start? (y/N): ")
+
+if agree != "y":
+    exit("Exiting.")

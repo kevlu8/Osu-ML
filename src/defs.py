@@ -1,4 +1,4 @@
 MISS = -10
-BAD = 0
-GOOD = 5
+BAD = -2
+GOOD = 3
 GREAT = 10
