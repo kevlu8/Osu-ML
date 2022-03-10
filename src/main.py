@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 import torchvision
+import torchvision.transforms as transforms
 import PIL.ImageGrab as ImageGrab
 
 import pynput
@@ -38,3 +39,4 @@ agree = input("Are you ready to start? (y/N): ")
 
 if agree != "y":
     exit("Exiting.")
+    
