@@ -1,64 +1,51 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import torchvision
-import torchvision.transforms as transforms
+import tensorflow as tf
+from tensorflow.python.keras import models
+import cv2
+import numpy as np
+from keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing import image
+from keras.optimizers import rmsprop_v2
 
-transform = transforms.Compose(
-    [transforms.ToTensor(),
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+import matplotlib.pyplot as plt
+import os
 
-batch_size = 4
+train_labels = []
+with open("trainlabels.txt", "r") as f:
+    for line in f:
+        train_labels.append(int(line))
 
-classes = ('circle', 'spinner', 'slider', '300', '100', '50', 'miss')
+train_images = []
+# go through imgs/ folder and append each image to train_images
+for filename in os.listdir("imgs/"):
+    img = plt.imread("imgs/" + filename)
+    train_images.append(img)
 
-class CNN(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+# convolutional neural network
+model = models.Sequential()
+model.add(tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 3)))
+model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(tf.keras.layers.Flatten())
+model.add(tf.keras.layers.Dense(64, activation='relu'))
+model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
 
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = torch.flatten(x, 1) # flatten all dimensions except batch
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
+model.summary()
 
+model.compile(optimizer='adam',
+              loss=tf.python.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
 
-cnn = CNN()
+history = model.fit(train_images, train_labels, epochs=10, 
+                    validation_data=(test_images, test_labels))
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(cnn.parameters(), lr=0.001, momentum=0.9)
+plt.plot(history.history['accuracy'], label='accuracy')
+plt.plot(history.history['val_accuracy'], label = 'val_accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.ylim([0.5, 1])
+plt.legend(loc='lower right')
 
-for epoch in range(int(input("range="))): 
-
-    running_loss = 0.0
-    for i, data in enumerate(trainloader, 0):
-        # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data
-
-        # zero the parameter gradients
-        optimizer.zero_grad()
-
-        # forward + backward + optimize
-        outputs = cnn(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        # print statistics
-        running_loss += loss.item()
-        if i % 2000 == 1999:    # print every 2000 mini-batches
-            print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
-            running_loss = 0.0
-
-torch.save(cnn.state_dict(), "cnn.pth")
-print('Finished Training')
+test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
+print(test_acc)
