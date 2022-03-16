@@ -1,51 +1,119 @@
-import tensorflow as tf
-from tensorflow.python.keras import models
-import cv2
-import numpy as np
-from keras.preprocessing.image import ImageDataGenerator
-from keras.preprocessing import image
-from keras.optimizers import rmsprop_v2
-
-import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import torch.backends.cudnn as cudnn
+import torchvision
+import torchvision.transforms as transforms
+from torch.utils.data import Dataset
 import os
+import argparse
+import cv2
 
-train_labels = []
-with open("trainlabels.txt", "r") as f:
-    for line in f:
-        train_labels.append(int(line))
+argparser = argparse.ArgumentParser()
+argparser.add_argument('--epochs', type=int, default=100)
+argparser.add_argument('--cuda', action='store_true')
+argparser.add_argument('--saveevery', type=int, default=10)
+argparser.parse_args()
+args = argparser.parse_args()
 
-train_images = []
-# go through imgs/ folder and append each image to train_images
-for filename in os.listdir("imgs/"):
-    img = plt.imread("imgs/" + filename)
-    train_images.append(img)
+if args.cuda:
+    device = "cuda" if torch.cuda.is_available() else exit("No CUDA GPU was found, but --cuda was set")
+else:
+    device = "cpu"
 
-# convolutional neural network
-model = models.Sequential()
-model.add(tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 3)))
-model.add(tf.keras.layers.MaxPooling2D((2, 2)))
-model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
-model.add(tf.keras.layers.MaxPooling2D((2, 2)))
-model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
-model.add(tf.keras.layers.Flatten())
-model.add(tf.keras.layers.Dense(64, activation='relu'))
-model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
+transform = transforms.Compose(
+    [transforms.ToTensor(),
+     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-model.summary()
+batch_size = 4
 
-model.compile(optimizer='adam',
-              loss=tf.python.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
+classes = ('circle', 'slider', 'spinner')
 
-history = model.fit(train_images, train_labels, epochs=10, 
-                    validation_data=(test_images, test_labels))
+class ImageDataset(Dataset):
+    def __init__(self):
+        with open("trainlabels.txt") as f:
+            self.labels = f.readlines()
+        imgs = []
+        for image in os.listdir("./imgs/"):
+            if image.endswith(".png"):
+                imgs.append(image[:-4])
+        self.imgs = imgs
+        self.img_dir = "imgs/"
+    
+    def __len__(self):
+        return len(self.labels)
+    
+    def __getitem__(self, i):   
+        img_path = os.path.join(self.img_dir, self.imgs[i]) + ".png"
+        image = torchvision.transforms.functional.to_tensor(cv2.imread(img_path))
+        if image.shape != (3, 256, 256):
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+        # label = torch.Tensor(self.target_transform(set(self.labels[os.path.basename(img_path).split(".")[0]])))
+        label = torch.Tensor(self.labels[os.path.basename(img_path)[:-4]])
+        return image, label
+    
+    def target_transform(self, labels):
+        label = [0.] * len(self.tags)
+        for i, t in enumerate(self.tags):
+            if t in labels:
+                label[i] = 1.
+        return label
 
-plt.plot(history.history['accuracy'], label='accuracy')
-plt.plot(history.history['val_accuracy'], label = 'val_accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.ylim([0.5, 1])
-plt.legend(loc='lower right')
+class CNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
 
-test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
-print(test_acc)
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 16 * 5 * 5)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+net = CNN().to(device)
+
+optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+
+if os.path.exists("cnn.pth"):
+    m = torch.load("cnn.pth")
+    net.load_state_dict(m["model"])
+    optimizer.load_state_dict(m["optimizer"])
+
+criterion = nn.CrossEntropyLoss()
+
+net.train()
+
+trainloader = torch.utils.data.DataLoader(
+    ImageDataset(),
+    batch_size=batch_size, shuffle=True)
+
+for epoch in range(args.epochs):
+    running_loss = 0.0
+    for i, data in enumerate(trainloader, 0):
+        inputs, labels = data
+        inputs, labels = inputs.to(device), labels.to(device)
+        optimizer.zero_grad()
+        outputs = net(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()
+        if i % 2000 == 1999:
+            print('[%d, %5d] loss: %.3f' %
+                  (epoch + 1, i + 1, running_loss / 2000))
+            running_loss = 0.0
+        if i % args.saveevery == 0:
+            torch.save({"model": net.state_dict(), "optimizer": optimizer.state_dict()}, 'cnn.pth')
+
+print('Finished Training')
+torch.save({"model": net.state_dict(), "optimizer": optimizer.state_dict()}, 'cnn.pth')
