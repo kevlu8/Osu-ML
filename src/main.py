@@ -1,3 +1,4 @@
+import sys
 from time import time
 import pynput
 import keyboard
@@ -16,13 +17,13 @@ import osu
 
 if not args.override:
 	if not osu.is_running():
-		exit("osu! is not running. Please start osu! (on a offline game) and try again.")
+		sys.exit("osu! is not running. Please start osu! (on a offline game) and try again.")
 
 	print("osu! is running. Make sure you are running the game offline (not on osu! servers: check the Github readme to learn how). We are not responsible if you get banned from official osu! servers.")
 	agree = input("Are you ready to start? (y/N): ")
 
 	if agree != "y":
-		exit("Exiting.")
+		sys.exit("Exiting.")
 	
 import torch
 import torch.nn as nn
@@ -36,7 +37,7 @@ import dnn
 import timeit
 
 if args.cuda:
-	device = "cuda" if torch.cuda.is_available() else exit("No CUDA GPU was found, but --cuda was specified.")
+	device = "cuda" if torch.cuda.is_available() else sys.exit("No CUDA GPU was found, but --cuda was specified.")
 
 	import GPUtil
 	GPUs = GPUtil.getGPUs()
