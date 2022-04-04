@@ -186,18 +186,18 @@ with open("keypresses.txt", "r") as f:
 			newline.append(num)
 		data.append(newline)
 
-dataScores = []
-with open("scores.txt", "r") as f:
-	for line in f:
-		# remove first and last characters
-		line = line[1:-2]
+# dataScores = []
+# with open("scores.txt", "r") as f:
+# 	for line in f:
+# 		# remove first and last characters
+# 		line = line[1:-2]
 
-		line = line.split(", ")
-		newline = []
-		for num in line:
-			num = float(num)
-			newline.append(num)
-		dataScores.append(newline)
+# 		line = line.split(", ")
+# 		newline = []
+# 		for num in line:
+# 			num = float(num)
+# 			newline.append(num)
+# 		dataScores.append(newline)
 
 if args.train == "conv":
 	for epoch in range(args.epochs):
