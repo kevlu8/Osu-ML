@@ -1,10 +1,7 @@
 import random
 import sys
-import pynput
-import keyboard
 import argparse
 from defs import *
-from subprocess import getoutput
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument('--epochs', type=int, default=100)
@@ -35,7 +32,6 @@ import torch.functional as F
 import os
 import numpy as np
 import PIL
-from mss import mss
 
 if args.cuda:
 	device = "cuda" if torch.cuda.is_available() else sys.exit("No CUDA GPU was found, but --cuda was specified.")
@@ -282,7 +278,10 @@ elif args.train == "test":
 		# output = scorenet(img)
 		# print(output)
 	# label the image of the circle and then show it
-else:
+else:	
+	from mss import mss
+	import pynput
+	import keyboard
 	def capture_screenshot():
 		# Capture entire screen
 		with mss() as sct:

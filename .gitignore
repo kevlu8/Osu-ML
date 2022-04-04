@@ -6,3 +6,4 @@ imgs/
 *.old
 __pycache__/
 *.exe
+*.zip
