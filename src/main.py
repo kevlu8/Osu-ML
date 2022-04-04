@@ -1,9 +1,10 @@
 import random
+import sys
 import pynput
 import keyboard
 import argparse
 from defs import *
-from mss import mss
+from subprocess import getoutput
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument('--epochs', type=int, default=100)
@@ -19,13 +20,13 @@ import osu
 
 if not args.override:
 	if not osu.is_running():
-		exit("osu! is not running. Please start osu! (on a offline game) and try again.")
+		sys.exit("osu! is not running. Please start osu! (on a offline game) and try again.")
 
 	print("osu! is running. Make sure you are running the game offline (not on osu! servers: check the Github readme to learn how). We are not responsible if you get banned from official osu! servers.")
 	agree = input("Are you ready to start? (y/N): ")
 
 	if agree != "y":
-		exit("Exiting.")
+		sys.exit("Exiting.")
 	
 import torch
 import torch.nn as nn
@@ -34,10 +35,10 @@ import torch.functional as F
 import os
 import numpy as np
 import PIL
-import random
+from mss import mss
 
 if args.cuda:
-	device = "cuda" if torch.cuda.is_available() else exit("No CUDA GPU was found, but --cuda was specified.")
+	device = "cuda" if torch.cuda.is_available() else sys.exit("No CUDA GPU was found, but --cuda was specified.")
 
 	import GPUtil
 	GPUs = GPUtil.getGPUs()
@@ -204,8 +205,6 @@ with open("scores.txt", "r") as f:
 
 if args.train == "conv":
 	for epoch in range(args.epochs):
-		print("Epoch: ", epoch)
-
 		for i, img in zip(*run_image()):
 			try:
 				circlenet.zero_grad()
@@ -228,13 +227,16 @@ if args.train == "conv":
 				output = circlenet(img)
 				print(output)
 			circlenet.train()
+			print(GPUs[0].temperature, "C")
+			
 		
 		if epoch % args.saveevery == 0:
 			circlenet.cpu()
 			torch.save({"model": circlenet.state_dict(), "optimizer": optimizer.state_dict()}, "weights.pth")
 			circlenet.to(device)
 
-		print("Loss: ", loss)
+		print("Epoch: ", epoch + 1, " Loss: ", loss)
+
 # elif args.train == "score":
 # 	for epoch in range(args.epochs):
 # 		print("Epoch: ", epoch)
@@ -299,6 +301,8 @@ else:
 		# use the network
 		# img = PIL.ImageGrab.grab().resize((256, 144))
 		img = capture_screenshot().resize((256, 144))
+		# grayscale
+		img = img.convert('L')
 		img = transforms.functional.pil_to_tensor(img).to(device)
 		img = img.type(torch.FloatTensor)
 		img = img.to(device)

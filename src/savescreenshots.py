@@ -6,7 +6,15 @@ from pyautogui import position
 i = 0
 from time import sleep
 sleep(5)
-		
+
+# delete all the files in the folder
+import os
+for filename in os.listdir("data/imgs"):
+	os.remove("data/imgs/" + filename)
+# wipe keypresses.txt
+with open("data/keypresses.txt", "w") as f:
+	f.write("")
+
 with open("keypresses.txt", "a") as f:
 	while True:
 		i += 1
