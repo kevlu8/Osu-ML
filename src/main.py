@@ -10,6 +10,7 @@ argparser.add_argument('--saveevery', type=int, default=10)
 argparser.add_argument('--override', action='store_true')
 argparser.add_argument('--train', type=str, default=None)
 argparser.add_argument('--lr', type=float, default=0.001)
+argparser.add_argument('--save_dir', type=str, default=".")
 argparser.parse_args()
 args = argparser.parse_args()
 
@@ -228,7 +229,7 @@ if args.train == "conv":
 		
 		if epoch % args.saveevery == 0:
 			circlenet.cpu()
-			torch.save({"model": circlenet.state_dict(), "optimizer": optimizer.state_dict()}, "weights.pth")
+			torch.save({"model": circlenet.state_dict(), "optimizer": optimizer.state_dict()}, f"{args.save_dir}/weights.pth")
 			circlenet.to(device)
 
 		print("Epoch: ", epoch + 1, " Loss: ", loss)
