@@ -1,5 +1,7 @@
 data/
 imgs/
 *.pth
-trainlabels.txt
 *.png
+*.txt
+*.old
+__pycache__/
