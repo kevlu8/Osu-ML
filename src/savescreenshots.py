@@ -13,7 +13,7 @@ import os
 # # wipe keypresses.txt
 # with open("keypresses.txt", "w") as f:
 # 	f.write("")
-i = len(os.listdir("data/imgs")) + 1
+i = len(os.listdir("data/imgs"))
 
 with open("keypresses.txt", "a") as f:
 	while True:

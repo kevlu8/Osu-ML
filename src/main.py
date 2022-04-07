@@ -94,6 +94,19 @@ def run_image(batch=1):
 		indexes.append(randint)
 	return (indexes, img)'''
 
+data = []
+with open("keypresses.txt", "r") as f:
+	for line in f:
+		# remove first and last characters
+		line = line[1:-2]
+
+		line = line.split(", ")
+		newline = []
+		for num in line:
+			num = float(num)
+			newline.append(num)
+		data.append(newline)
+
 class osuDataSet(torch.utils.data.Dataset):
 	def __init__(self, batch=1):
 		self.indexes = []
@@ -111,14 +124,20 @@ class osuDataSet(torch.utils.data.Dataset):
 		return len(self.indexes) if self.indexes is not None else 0
 	
 	def __getitem__(self, index):
-		for i in range(len(self.indexes)):
+		'''for i in range(len(self.indexes)):
 			if self.indexes[i] == index:
 				t = self.imgs[i]
 				t = (PIL.Image.open(t))
 				t = transforms.functional.pil_to_tensor(t).to(device)
 				t = t.type(torch.FloatTensor)
 				t = t.to(device)
-				return (self.indexes[i], t)
+				return (self.indexes[i], t)'''
+		# return (self.indexes[index], self.imgs[index])
+		img = PIL.Image.open(self.imgs[index])
+		img = transforms.functional.pil_to_tensor(img).to(device)
+		img = img.type(torch.FloatTensor)
+		img = img.to(device)
+		return (torch.tensor(data[index]), img)
 
 trainDataloader = torch.utils.data.DataLoader(osuDataSet(), batch_size=64, shuffle=True)
 
@@ -146,19 +165,6 @@ for param in optimizer.state.values(): # set optimizer to device
 				if subparam._grad is not None:
 					subparam._grad.data = subparam._grad.data.to(device)
 
-data = []
-with open("keypresses.txt", "r") as f:
-	for line in f:
-		# remove first and last characters
-		line = line[1:-2]
-
-		line = line.split(", ")
-		newline = []
-		for num in line:
-			num = float(num)
-			newline.append(num)
-		data.append(newline)
-
 if args.train == "conv":
 	losses = []
 	for epoch in range(args.epochs):
@@ -177,27 +183,28 @@ if args.train == "conv":
 		# 		optimizer.step()
 		# 	except: # somehow data[i] is out of range sometimes?
 		# 		continue
-		for index, img in enumerate(trainDataloader):
-			try:
+		for (index, img) in trainDataloader:
+			# try:
+			for i, image in enumerate(img):
 				circlenet.zero_grad()
 				optimizer.zero_grad()
-				img = img.to(device)
-				output = circlenet(img)
+				output = circlenet(image)
+				# print(index[i])
 				# torch.sigmoid(output[0])
 				loss = nn.functional.mse_loss(output, torch.tensor(
-					data[index]
+					index[i]
 				, device=device, dtype=torch.float))
 				loss = loss.to(device)
 				loss.backward()
 				optimizer.step()
-			except: # somehow data[i] is out of range sometimes?
-				continue
+			# except: # remainder of 64
+			# 	continue
 
 		# test
 		if epoch % 50 == 0:
 			circlenet.eval()
 			with torch.no_grad():
-				output = circlenet(img)
+				output = circlenet(image)
 				print(output)
 			circlenet.train()
 			print(GPUs[0].temperature, "C")
@@ -207,10 +214,10 @@ if args.train == "conv":
 			torch.save({"model": circlenet.state_dict(), "optimizer": optimizer.state_dict()}, f"{args.save_dir}/weights.pth")
 			circlenet.to(device)
 
-		try:
-			losses.append(loss.item())
-			print("Epoch: ", epoch + 1, " Loss: ", loss.item()) 
-		except: continue
+		# try:
+		losses.append(loss.item())
+		print("Epoch: ", epoch + 1, "Batch: ", i, "/", len(trainDataloader), " Loss: ", loss.item()) 
+		# except: continue
 	import matplotlib.pyplot as plt
 	plt.plot(losses)
 	plt.show()
