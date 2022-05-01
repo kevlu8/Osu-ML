@@ -17,7 +17,7 @@ i = len(os.listdir("data/imgs"))
 
 with open("keypresses.txt", "a") as f:
 	while True:
-		i += 1
+		i += 1 
 		img = PIL.ImageGrab.grab().resize((256, 144))
 		img = img.convert('L')
 		img.save(f"data/imgs/img{i}.jpg", "JPEG")
